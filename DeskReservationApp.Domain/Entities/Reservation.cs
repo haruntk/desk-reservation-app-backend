@@ -15,7 +15,7 @@ namespace DeskReservationApp.Domain.Entities
 
         public DateTime EndTime { get; set; }
 
-        public string Status { get; set; } = "Active"; // Active, Cancelled, Completed
+        public string Status { get; set; } = "Scheduled"; // Scheduled, Active, Cancelled, Completed
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

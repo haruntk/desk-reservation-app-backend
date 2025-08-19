@@ -4,6 +4,8 @@ using DeskReservationApp.Application.Exceptions;
 using DeskReservationApp.Application.Interfaces;
 using DeskReservationApp.Domain.Entities;
 using DeskReservationApp.Domain.Interfaces;
+using DeskReservationApp.Domain.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace DeskReservationApp.Application.Services
 {
@@ -11,11 +13,13 @@ namespace DeskReservationApp.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ReservationStatusOptions _statusOptions;
 
-        public ReservationService(IUnitOfWork unitOfWork, IMapper mapper)
+        public ReservationService(IUnitOfWork unitOfWork, IMapper mapper, IOptions<ReservationStatusOptions> statusOptions)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _statusOptions = statusOptions.Value;
         }
 
         public async Task CancelReservationAsync(int reservationId, string userId)
@@ -53,8 +57,40 @@ namespace DeskReservationApp.Application.Services
 
             var reservation = _mapper.Map<Reservation>(createReservationRequest);
             reservation.UserId = userId;
-            reservation.Status = "Active";
             reservation.CreatedAt = DateTime.UtcNow;
+            
+            // Validate reservation times
+            var now = DateTime.UtcNow;
+            
+            if (createReservationRequest.EndTime <= now && !_statusOptions.AllowPastReservations)
+            {
+                throw new BadRequestException("Cannot create a reservation with a past end time.");
+            }
+
+            if (createReservationRequest.StartTime < now && !_statusOptions.AllowPastReservations)
+            {
+                throw new BadRequestException("Cannot create a reservation with a past start time.");
+            }
+
+            var maxFutureDate = now.AddDays(_statusOptions.MaxAdvanceReservationDays);
+            if (createReservationRequest.StartTime > maxFutureDate)
+            {
+                throw new BadRequestException($"Cannot create a reservation more than {_statusOptions.MaxAdvanceReservationDays} days in advance.");
+            }
+
+            // Set status based on start time
+            if (createReservationRequest.StartTime <= now && createReservationRequest.EndTime > now)
+            {
+                reservation.Status = "Active"; // Currently ongoing
+            }
+            else if (createReservationRequest.StartTime > now)
+            {
+                reservation.Status = "Scheduled"; // Future reservation
+            }
+            else if (_statusOptions.AllowPastReservations)
+            {
+                reservation.Status = "Completed"; // Past reservation (admin created)
+            }
 
             await _unitOfWork.Reservations.AddAsync(reservation);
             await _unitOfWork.SaveChangesAsync();

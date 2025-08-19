@@ -61,7 +61,7 @@ namespace DeskReservationApp.Infrastructure.Persistance.Repositories
             return await _dbSet
                 .Where(r => r.UserId == userId &&
                            r.StartTime > now &&
-                           r.Status == "Active")
+                           (r.Status == "Active" || r.Status == "Scheduled"))
                 .Include(r => r.Desk)
                 .ThenInclude(d => d.Floor)
                 .OrderBy(r => r.StartTime)
@@ -71,7 +71,7 @@ namespace DeskReservationApp.Infrastructure.Persistance.Repositories
         public async Task<bool> HasOverlappingReservationAsync(int deskId, DateTime startTime, DateTime endTime, int? excludeReservationId = null)
         {
             var query = _dbSet.Where(r => r.DeskId == deskId &&
-                                     r.Status == "Active" &&
+                                     (r.Status == "Active" || r.Status == "Scheduled") &&
                                      (r.StartTime <= startTime && r.EndTime > startTime ||
                                       r.StartTime < endTime && r.EndTime >= endTime ||
                                       r.StartTime >= startTime && r.EndTime <= endTime));
@@ -84,12 +84,21 @@ namespace DeskReservationApp.Infrastructure.Persistance.Repositories
             return await query.AnyAsync();
         }
 
-        public async Task<IEnumerable<Reservation>> GetReservationsWithDetailsAsync()
+        public async Task<IEnumerable<Reservation>> GetExpiredActiveReservationsAsync(DateTime currentTime)
         {
             return await _dbSet
+                .Where(r => r.Status == "Active" && r.EndTime <= currentTime)
                 .Include(r => r.Desk)
                 .ThenInclude(d => d.Floor)
-                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Reservation>> GetScheduledReservationsToActivateAsync(DateTime currentTime)
+        {
+            return await _dbSet
+                .Where(r => r.Status == "Scheduled" && r.StartTime <= currentTime && r.EndTime > currentTime)
+                .Include(r => r.Desk)
+                .ThenInclude(d => d.Floor)
                 .ToListAsync();
         }
 

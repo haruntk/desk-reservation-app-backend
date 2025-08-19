@@ -10,10 +10,12 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using DeskReservationApp.Infrastructure.Persistance;
 using DeskReservationApp.Infrastructure.Persistance.Repositories;
-using DeskReservationApp.Infrastructure.Persistance.Configurations;
+using DeskReservationApp.Domain.Configuration;
 using DeskReservationApp.Infrastructure.Mappings;
 using DeskReservationApp.Application.Services;
 using DeskReservationApp.API.Middleware;
+using DeskReservationApp.Infrastructure.Services;
+using DeskReservationApp.Infrastructure.Persistance.Configurations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,6 +64,7 @@ builder.Services.AddDbContext<DeskReservationDbContext>(options =>
 
 // Configuration
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<ReservationStatusOptions>(builder.Configuration.GetSection(ReservationStatusOptions.SectionName));
 
 // Register repositories
 builder.Services.AddScoped<IFloorRepository, FloorRepository>();
@@ -83,6 +86,10 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IIdentityService, IdentityService>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddScoped<RoleSeedService>();
+builder.Services.AddScoped<IReservationStatusService, ReservationStatusService>();
+
+// Background services
+builder.Services.AddHostedService<ReservationStatusBackgroundService>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(AutoMapperProfiles), typeof(InfrastructureMappingProfile));

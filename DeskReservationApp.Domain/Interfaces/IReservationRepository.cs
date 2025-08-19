@@ -13,6 +13,7 @@ namespace DeskReservationApp.Domain.Interfaces
         Task<IEnumerable<Reservation>> GetPastReservationsAsync(string userId);
         Task<IEnumerable<Reservation>> GetUpcomingReservationsAsync(string userId);
         Task<bool> HasOverlappingReservationAsync(int deskId, DateTime startTime, DateTime endTime, int? excludeReservationId = null);
-        Task<IEnumerable<Reservation>> GetReservationsWithDetailsAsync();
+        Task<IEnumerable<Reservation>> GetExpiredActiveReservationsAsync(DateTime currentTime);
+        Task<IEnumerable<Reservation>> GetScheduledReservationsToActivateAsync(DateTime currentTime);
     }
 }
