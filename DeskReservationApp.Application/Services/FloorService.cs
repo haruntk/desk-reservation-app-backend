@@ -70,10 +70,10 @@ namespace DeskReservationApp.Application.Services
             return _mapper.Map<FloorDTO>(floor);
         }
 
-        public async Task<IEnumerable<FloorDTO>> GetFloorsWithDesksAsync()
+        public async Task<IEnumerable<FloorResponseDTO>> GetFloorsWithDesksAsync()
         {
             var floors = await _unitOfWork.Floors.GetFloorsWithDesksAsync();
-            return _mapper.Map<IEnumerable<FloorDTO>>(floors);
+            return _mapper.Map<IEnumerable<FloorResponseDTO>>(floors);
         }
 
         public async Task UpdateFloorAsync(int floorId, UpdateFloorRequestDTO updateFloorRequest)

@@ -31,6 +31,16 @@ namespace DeskReservationApp.API.Controllers
         }
 
         /// <summary>
+        /// Get all floors with their desk information
+        /// </summary>
+        [HttpGet("get-all-with-desks")]
+        public async Task<IActionResult> GetAllFloorsWithDesks()
+        {
+            var response = await _floorService.GetFloorsWithDesksAsync();
+            return Ok(response);
+        }
+
+        /// <summary>
         /// Get floor by ID
         /// </summary>
         [HttpGet("get/{id}")]

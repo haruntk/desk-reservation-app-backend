@@ -14,7 +14,6 @@ using DeskReservationApp.Domain.Configuration;
 using DeskReservationApp.Infrastructure.Mappings;
 using DeskReservationApp.Application.Services;
 using DeskReservationApp.API.Middleware;
-using DeskReservationApp.Infrastructure.Services;
 using DeskReservationApp.Infrastructure.Persistance.Configurations;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -81,6 +80,10 @@ builder.Services.AddScoped<IDeskService, DeskService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+
+// Add Email Service
+builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
+builder.Services.AddTransient<IEmailService, EmailService>();
 
 // Infrastructure services
 builder.Services.AddScoped<IIdentityService, IdentityService>();

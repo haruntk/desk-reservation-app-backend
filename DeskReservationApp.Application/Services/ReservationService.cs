@@ -14,12 +14,14 @@ namespace DeskReservationApp.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ReservationStatusOptions _statusOptions;
+        private readonly IEmailService _emailService;
 
-        public ReservationService(IUnitOfWork unitOfWork, IMapper mapper, IOptions<ReservationStatusOptions> statusOptions)
+        public ReservationService(IUnitOfWork unitOfWork, IMapper mapper, IOptions<ReservationStatusOptions> statusOptions, IEmailService emailService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _statusOptions = statusOptions.Value;
+            _emailService = emailService;
         }
 
         public async Task CancelReservationAsync(int reservationId, string userId)
@@ -77,6 +79,11 @@ namespace DeskReservationApp.Application.Services
             {
                 throw new BadRequestException($"Cannot create a reservation more than {_statusOptions.MaxAdvanceReservationDays} days in advance.");
             }
+            TimeSpan timeSpan = createReservationRequest.EndTime - createReservationRequest.StartTime;
+            if ((int)timeSpan.TotalMinutes < 10)
+            {
+                throw new BadRequestException("Cannot create a reservation for less than 10 minutes.");
+            }
 
             // Set status based on start time
             if (createReservationRequest.StartTime <= now && createReservationRequest.EndTime > now)
@@ -94,6 +101,34 @@ namespace DeskReservationApp.Application.Services
 
             await _unitOfWork.Reservations.AddAsync(reservation);
             await _unitOfWork.SaveChangesAsync();
+
+            // Send confirmation email
+            try
+            {
+                var user = await _unitOfWork.Users.GetByIdAsync(userId);
+                if (user != null && !string.IsNullOrEmpty(user.Email))
+                {
+                    var deskWithFloor = await _unitOfWork.Desks.GetByIdAsync(reservation.DeskId);
+                    var subject = "Reservation Confirmation";
+                    var body = $"Dear {user.UserName},<br/><br/>" +
+                               $"Your desk reservation has been successfully created.<br/><br/>" +
+                               $"<b>Details:</b><br/>" +
+                               $"Floor: {deskWithFloor?.Floor?.FloorNumber}<br/>" +
+                               $"Desk: {deskWithFloor?.DeskName}<br/>" +
+                               $"Start Time: {reservation.StartTime:g} (UTC)<br/>" +
+                               $"End Time: {reservation.EndTime:g} (UTC)<br/><br/>" +
+                               $"Thank you for using our Desk Reservation App!";
+
+                    await _emailService.SendEmailAsync(user.Email, subject, body);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Here we should log the exception but not let it break the main operation.
+                // The reservation was successful, but the email failed.
+                // A proper logger should be injected and used here.
+                System.Diagnostics.Debug.WriteLine($"Error sending email: {ex.Message}");
+            }
 
             return reservation.ReservationId;
         }

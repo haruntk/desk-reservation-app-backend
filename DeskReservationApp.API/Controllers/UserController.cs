@@ -1,7 +1,9 @@
 ﻿using DeskReservationApp.Application.DTOs.Authentication;
+using DeskReservationApp.Application.DTOs.User;
 using DeskReservationApp.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace DeskReservationApp.API.Controllers
 {
@@ -69,6 +71,23 @@ namespace DeskReservationApp.API.Controllers
         {
             var response = await _userService.GetAllAsync();
             return Ok(response);
+        }
+
+        /// <summary>
+        /// Get current user information
+        /// </summary>
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("User ID not found in token");
+            }
+
+            var user = await _userService.GetByIdAsync(userId);
+            return Ok(user);
         }
 
         /// <summary>

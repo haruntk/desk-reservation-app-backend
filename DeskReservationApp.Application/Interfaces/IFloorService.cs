@@ -10,7 +10,7 @@ namespace DeskReservationApp.Application.Interfaces
         Task<IEnumerable<FloorResponseDTO>> GetAllFloorsAsync();
         Task<FloorDTO> GetFloorByIdAsync(int floorId);
         Task<FloorDTO> GetFloorWithDesksAsync(int floorId);
-        Task<IEnumerable<FloorDTO>> GetFloorsWithDesksAsync();
+        Task<IEnumerable<FloorResponseDTO>> GetFloorsWithDesksAsync();
         Task<int> CreateFloorAsync(CreateFloorRequestDTO createFloorRequest);
         Task UpdateFloorAsync(int floorId, UpdateFloorRequestDTO updateFloorRequest);
         Task DeleteFloorAsync(int floorId);
