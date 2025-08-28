@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "DeskReservationApp.Infrastructure": {
+      "commandName": "Project"
+    }
+  }
+}

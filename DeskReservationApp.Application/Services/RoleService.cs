@@ -1,20 +1,23 @@
 using DeskReservationApp.Application.DTOs.Role;
 using DeskReservationApp.Application.Exceptions;
 using DeskReservationApp.Application.Interfaces;
+using DeskReservationApp.Domain.Entities;
 using DeskReservationApp.Domain.Interfaces;
 
 namespace DeskReservationApp.Application.Services
 {
+    /// <summary>
+    /// Role service for Windows Authentication
+    /// </summary>
     public class RoleService : IRoleService
     {
-        private readonly IIdentityService _identityService;
         private readonly IUserRepository _userRepository;
+        private readonly IWindowsAuthService _windowsAuthService;
 
-
-        public RoleService(IIdentityService identityService, IUserRepository userRepository)
+        public RoleService(IUserRepository userRepository, IWindowsAuthService windowsAuthService)
         {
-            _identityService = identityService;
             _userRepository = userRepository;
+            _windowsAuthService = windowsAuthService;
         }
 
         public async Task AssignRoleAsync(AssignRoleRequestDTO request)
@@ -25,38 +28,21 @@ namespace DeskReservationApp.Application.Services
                 throw new NotFoundException("User not found.");
             }
 
-            if (!await _identityService.RoleExistsAsync(request.RoleName))
+            // For Windows Authentication, we use predefined roles
+            var validRoles = new[] { "User", "TeamLead", "Admin" };
+            if (!validRoles.Contains(request.RoleName))
             {
-                throw new BadRequestException($"Role '{request.RoleName}' does not exist.");
+                throw new BadRequestException($"Role '{request.RoleName}' is not a valid role. Valid roles are: {string.Join(", ", validRoles)}");
             }
 
-            await _identityService.AssignUserToRoleAsync(user.Id, request.RoleName);
+            await _windowsAuthService.AssignRoleToWindowsUserAsync(user.UserName, request.RoleName);
         }
 
         public async Task CreateRoleAsync(CreateRoleRequestDTO request)
         {
-            if (await _identityService.RoleExistsAsync(request.RoleName))
-            {
-                throw new BadRequestException($"Role '{request.RoleName}' already exists.");
-            }
-
-            await _identityService.CreateRoleAsync(request.RoleName);
-        }
-
-        public async Task<IList<string>> GetAllRolesAsync()
-        {
-            return await _identityService.GetAllRolesAsync();
-        }
-
-        public async Task<IList<string>> GetUserRolesAsync(string userId)
-        {
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null)
-            {
-                throw new NotFoundException("User not found.");
-            }
-
-            return await _identityService.GetUserRolesAsync(user.Id);
+            // For Windows Authentication, roles are predefined
+            await Task.CompletedTask;
+            throw new NotImplementedException("Creating roles is not supported with Windows Authentication. Roles are predefined: User, TeamLead, Admin.");
         }
 
         public async Task RemoveRoleAsync(AssignRoleRequestDTO request)
@@ -67,12 +53,23 @@ namespace DeskReservationApp.Application.Services
                 throw new NotFoundException("User not found.");
             }
 
-            if (!await _identityService.RoleExistsAsync(request.RoleName))
+            await _windowsAuthService.RemoveRoleFromWindowsUserAsync(user.UserName, request.RoleName);
+        }
+
+        public async Task<ICollection<UserRole>> GetUserRolesAsync(string userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null) 
             {
-                throw new BadRequestException($"Role '{request.RoleName}' does not exist.");
+                throw new NotFoundException("User not found.");
             }
 
-            await _identityService.RemoveUserFromRoleAsync(user.Id, request.RoleName);
+            return user.Roles;
+        }
+
+        Task<IList<UserRole>> IRoleService.GetAllRolesAsync()
+        {
+            throw new NotImplementedException();
         }
     }
 }

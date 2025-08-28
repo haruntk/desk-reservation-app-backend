@@ -1,38 +1,51 @@
-using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using DeskReservationApp.Domain.Interfaces;
+using DeskReservationApp.Domain.Entities;
+using DeskReservationApp.Domain.Configuration;
+using DeskReservationApp.Infrastructure.Persistance;
 
 namespace DeskReservationApp.Infrastructure.Services
 {
     /// <summary>
-    /// Service to seed initial roles in the system
+    /// Service to seed initial data for Windows Authentication
     /// </summary>
     public class RoleSeedService
     {
-        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly ILogger<RoleSeedService> _logger;
+        private readonly IRoleRepository _roleRepository;
+        private readonly IAuthUnitOfWork _authUnitOfWork;
+        private readonly WindowsAuthOptions _options;
 
-        public RoleSeedService(RoleManager<IdentityRole> roleManager)
+        public RoleSeedService(
+            ILogger<RoleSeedService> logger, 
+            IRoleRepository roleRepository, 
+            IAuthUnitOfWork authUnitOfWork,
+            IOptions<WindowsAuthOptions> options)
         {
-            _roleManager = roleManager;
+            _logger = logger;
+            _roleRepository = roleRepository;
+            _authUnitOfWork = authUnitOfWork;
+            _options = options.Value;
         }
 
         public async Task SeedRolesAsync()
         {
-            // Admin rolü
-            if (!await _roleManager.RoleExistsAsync("Admin"))
+            _logger.LogInformation("Starting Windows Authentication role seeding...");
+            
+            foreach (var roleName in _options.PredefinedRoles)
             {
-                await _roleManager.CreateAsync(new IdentityRole("Admin"));
+                var existingRole = await _roleRepository.GetByNameAsync(roleName);
+                if (existingRole == null)
+                {
+                    var role = new Role(roleName);
+                    await _roleRepository.AddAsync(role);
+                    _logger.LogInformation("Created role: {RoleName}", roleName);
+                }
             }
 
-            // User rolü
-            if (!await _roleManager.RoleExistsAsync("User"))
-            {
-                await _roleManager.CreateAsync(new IdentityRole("User"));
-            }
-
-            // Takım lideri rolü 
-            if (!await _roleManager.RoleExistsAsync("TeamLead"))
-            {
-                await _roleManager.CreateAsync(new IdentityRole("TeamLead"));
-            }
+            await _authUnitOfWork.SaveChangesAsync();
+            _logger.LogInformation("Windows Authentication role seeding completed with {RoleCount} roles", _options.PredefinedRoles.Length);
         }
     }
 }

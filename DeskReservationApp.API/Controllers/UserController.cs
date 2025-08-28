@@ -1,4 +1,4 @@
-﻿using DeskReservationApp.Application.DTOs.Authentication;
+﻿using AutoMapper;
 using DeskReservationApp.Application.DTOs.User;
 using DeskReservationApp.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,54 +12,14 @@ namespace DeskReservationApp.API.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly IWindowsAuthService _windowsAuthService;
+        private readonly IMapper _mapper;
 
-        public UserController(IUserService userService)
+        public UserController(IUserService userService, IWindowsAuthService windowsAuthService, IMapper mapper)
         {
             _userService = userService;
-        }
-
-        /// <summary>
-        /// Register a new user (default role: User)
-        /// </summary>
-        [HttpPost("register")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Register([FromBody] RegisterRequestDTO registerRequest)
-        {
-            var response = await _userService.Register(registerRequest, false);
-            return Ok(response);
-        }
-
-        /// <summary>
-        /// Register a new admin user (only existing admins can do this)
-        /// </summary>
-        [HttpPost("register-admin")]
-        [Authorize(Policy = "AdminOnly")]
-        public async Task<IActionResult> RegisterAdmin([FromBody] RegisterRequestDTO registerRequest)
-        {
-            var response = await _userService.Register(registerRequest, true);
-            return Ok(response);
-        }
-
-        /// <summary>
-        /// User login
-        /// </summary>
-        [HttpPost("login")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Login([FromBody] LoginRequestDTO request)
-        {
-            var response = await _userService.Login(request);
-            return Ok(response);
-        }
-
-        /// <summary>
-        /// User logout (JWT is stateless; logout is a client-side token discard)
-        /// </summary>
-        [HttpPost("logout")]
-        [Authorize]
-        public async Task<IActionResult> Logout()
-        {
-            await _userService.Logout();
-            return Ok(new { message = "Logout successful. Please discard your token client-side." });
+            _windowsAuthService = windowsAuthService;
+            _mapper = mapper;
         }
 
         /// <summary>
@@ -80,14 +40,53 @@ namespace DeskReservationApp.API.Controllers
         [Authorize]
         public async Task<IActionResult> GetCurrentUser()
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
+            var windowsUsername = User.Identity?.Name;
+            if (string.IsNullOrEmpty(windowsUsername))
             {
-                return Unauthorized("User ID not found in token");
+                return Unauthorized("Windows username not found");
             }
 
-            var user = await _userService.GetByIdAsync(userId);
-            return Ok(user);
+            var user = await _windowsAuthService.GetOrCreateWindowsUserAsync(windowsUsername);
+            
+            var userDto = _mapper.Map<UserDTO>(user);
+
+            return Ok(userDto);
+        }
+
+        /// <summary>
+        /// Assign role to Windows user (Admin only)
+        /// </summary>
+        [HttpPost("{username}/assign-role/{roleName}")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> AssignRole(string username, string roleName)
+        {
+            try
+            {
+                await _windowsAuthService.AssignRoleToWindowsUserAsync(username, roleName);
+                return Ok(new { message = $"Role '{roleName}' assigned to user '{username}' successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Remove role from Windows user (Admin only)
+        /// </summary>
+        [HttpDelete("{username}/remove-role/{roleName}")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> RemoveRole(string username, string roleName)
+        {
+            try
+            {
+                await _windowsAuthService.RemoveRoleFromWindowsUserAsync(username, roleName);
+                return Ok(new { message = $"Role '{roleName}' removed from user '{username}' successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         /// <summary>

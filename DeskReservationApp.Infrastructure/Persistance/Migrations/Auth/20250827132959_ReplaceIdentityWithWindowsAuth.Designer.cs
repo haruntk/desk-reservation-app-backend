@@ -3,6 +3,7 @@ using DeskReservationApp.Infrastructure.Persistance;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeskReservationApp.Infrastructure.Persistance.Migrations.Auth
 {
     [DbContext(typeof(DeskReservationAuthDbContext))]
-    partial class DeskReservationAuthDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250827132959_ReplaceIdentityWithWindowsAuth")]
+    partial class ReplaceIdentityWithWindowsAuth
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

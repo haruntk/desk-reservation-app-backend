@@ -14,8 +14,14 @@ namespace DeskReservationApp.Application.Mappings
     {
         public AutoMapperProfiles()
         {
-            // User mappings
-            CreateMap<User, UserDTO>().ReverseMap();
+            // User mappings - for Windows Authentication
+            CreateMap<User, UserDTO>()
+                .ForMember(dest => dest.Roles, opt => opt.MapFrom(src => 
+                    src.Roles != null 
+                        ? src.Roles.Where(ur => ur.Role != null).Select(ur => ur.Role.Name).ToList() 
+                        : new List<string>()))
+                .ReverseMap()
+                .ForMember(dest => dest.Roles, opt => opt.Ignore()); // Roles are managed separately in Windows Auth
 
             // Floor mappings
             CreateMap<Floor, FloorDTO>().ReverseMap();

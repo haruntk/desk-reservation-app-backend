@@ -2,12 +2,9 @@ using DeskReservationApp.Application.Mappings;
 using DeskReservationApp.Domain.Interfaces;
 using DeskReservationApp.Application.Interfaces;
 using DeskReservationApp.Infrastructure.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Text;
 using DeskReservationApp.Infrastructure.Persistance;
 using DeskReservationApp.Infrastructure.Persistance.Repositories;
 using DeskReservationApp.Domain.Configuration;
@@ -15,6 +12,7 @@ using DeskReservationApp.Infrastructure.Mappings;
 using DeskReservationApp.Application.Services;
 using DeskReservationApp.API.Middleware;
 using DeskReservationApp.Infrastructure.Persistance.Configurations;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,18 +20,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Swagger + JWT bearer
+// Swagger + Windows Authentication
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "Desk Reservation App", Version = "v1" });
-    options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
+    options.AddSecurityDefinition("windows", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: '{jwt-token}'",
+        Description = "Windows Authentication",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT"
+        Scheme = "negotiate"
     });
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -43,11 +40,8 @@ builder.Services.AddSwaggerGen(options =>
                 Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
-                    Id = JwtBearerDefaults.AuthenticationScheme
-                },
-                Scheme = "bearer",
-                Name = JwtBearerDefaults.AuthenticationScheme,
-                In = ParameterLocation.Header
+                    Id = "windows"
+                }
             },
             new List<string>()
         }
@@ -55,24 +49,26 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // Database contexts
-builder.Services.AddDbContext<DeskReservationAuthDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DeskReservationAuthConnectionString")));
-
 builder.Services.AddDbContext<DeskReservationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DeskReservationConnectionString")));
 
+builder.Services.AddDbContext<DeskReservationAuthDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DeskReservationAuthConnectionString")));
+
 // Configuration
-builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<ReservationStatusOptions>(builder.Configuration.GetSection(ReservationStatusOptions.SectionName));
+builder.Services.Configure<WindowsAuthOptions>(builder.Configuration.GetSection(WindowsAuthOptions.SectionName));
 
 // Register repositories
 builder.Services.AddScoped<IFloorRepository, FloorRepository>();
 builder.Services.AddScoped<IDeskRepository, DeskRepository>();
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 
 // Register Unit of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IAuthUnitOfWork, AuthUnitOfWork>();
 
 // Register application services
 builder.Services.AddScoped<IFloorService, FloorService>();
@@ -86,10 +82,10 @@ builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailS
 builder.Services.AddTransient<IEmailService, EmailService>();
 
 // Infrastructure services
-builder.Services.AddScoped<IIdentityService, IdentityService>();
-builder.Services.AddSingleton<ITokenService, TokenService>();
+builder.Services.AddScoped<IWindowsAuthService, WindowsAuthService>();
 builder.Services.AddScoped<RoleSeedService>();
 builder.Services.AddScoped<IReservationStatusService, ReservationStatusService>();
+builder.Services.AddScoped<IClaimsTransformation, WindowsClaimsTransformation>();
 
 // Background services
 builder.Services.AddHostedService<ReservationStatusBackgroundService>();
@@ -97,50 +93,23 @@ builder.Services.AddHostedService<ReservationStatusBackgroundService>();
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(AutoMapperProfiles), typeof(InfrastructureMappingProfile));
 
-// CORS
+// CORS - Updated for Windows Authentication
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Default", policy =>
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173") // Frontend URL
               .AllowAnyHeader()
-              .AllowAnyMethod());
+              .AllowAnyMethod()
+              .AllowCredentials()); // Required for Windows Authentication
 });
 
-// Identity Core
-builder.Services.AddIdentityCore<IdentityUser>()
-    .AddRoles<IdentityRole>()
-    .AddTokenProvider<DataProtectorTokenProvider<IdentityUser>>("DeskReservationApp")
-    .AddEntityFrameworkStores<DeskReservationAuthDbContext>()
-    .AddSignInManager()
-    .AddDefaultTokenProviders();
-
-builder.Services.Configure<IdentityOptions>(options =>
-{
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = false;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequireUppercase = false;
-    options.Password.RequiredLength = 6;
-    options.Password.RequiredUniqueChars = 1;
-    options.User.RequireUniqueEmail = true;
-});
-
-// JWT authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+// Windows Authentication
+builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
+    .AddNegotiate(options =>
     {
-        var jwt = builder.Configuration.GetSection("Jwt");
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwt["Issuer"],
-            ValidAudience = jwt["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
-            ClockSkew = TimeSpan.Zero
-        };
+        // Configure for IIS and HTTP.sys
+        options.PersistKerberosCredentials = true;
+        options.PersistNtlmCredentials = true;
     });
 
 // Authorization policies
@@ -167,18 +136,17 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Apply migrations and seed roles at startup
+// Apply migrations and seed data at startup
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     
-    // Apply Auth database migrations
-    var authDb = services.GetRequiredService<DeskReservationAuthDbContext>();
-    authDb.Database.Migrate();
-
-    // Apply Business database migrations
+    // Apply database migrations
     var businessDb = services.GetRequiredService<DeskReservationDbContext>();
     businessDb.Database.Migrate();
+
+    var authDb = services.GetRequiredService<DeskReservationAuthDbContext>();
+    authDb.Database.Migrate();
 
     var roleSeedService = services.GetRequiredService<RoleSeedService>();
     await roleSeedService.SeedRolesAsync();

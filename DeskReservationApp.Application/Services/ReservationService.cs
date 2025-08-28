@@ -50,6 +50,13 @@ namespace DeskReservationApp.Application.Services
                 throw new BadRequestException($"Desk with id {createReservationRequest.DeskId} does not exist.");
             }
 
+            var haveReservation = _unitOfWork.Reservations.GetUpcomingReservationsAsync(userId);
+
+            if (haveReservation != null)
+            {
+                throw new BadRequestException("You can't book more than 1 desk!");
+            }
+
             var overlappingReservation = await _unitOfWork.Reservations.HasOverlappingReservationAsync(
                 createReservationRequest.DeskId, createReservationRequest.StartTime, createReservationRequest.EndTime);
             if (overlappingReservation)

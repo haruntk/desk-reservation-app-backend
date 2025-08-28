@@ -1,4 +1,5 @@
 using DeskReservationApp.Application.DTOs.Role;
+using DeskReservationApp.Domain.Entities;
 
 namespace DeskReservationApp.Application.Interfaces
 {
@@ -9,8 +10,8 @@ namespace DeskReservationApp.Application.Interfaces
     {
         Task AssignRoleAsync(AssignRoleRequestDTO request);
         Task RemoveRoleAsync(AssignRoleRequestDTO request);
-        Task<IList<string>> GetUserRolesAsync(string userId);
-        Task<IList<string>> GetAllRolesAsync();
+        Task<ICollection<UserRole>> GetUserRolesAsync(string userId);
+        Task<IList<UserRole>> GetAllRolesAsync();
         Task CreateRoleAsync(CreateRoleRequestDTO request);
     }
 }

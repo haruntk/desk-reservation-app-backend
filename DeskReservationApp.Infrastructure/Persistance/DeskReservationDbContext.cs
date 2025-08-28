@@ -17,6 +17,7 @@ namespace DeskReservationApp.Infrastructure.Persistance
         public DbSet<Floor> Floors { get; set; }
         public DbSet<Desk> Desks { get; set; }
         public DbSet<Reservation> Reservations { get; set; }
+        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

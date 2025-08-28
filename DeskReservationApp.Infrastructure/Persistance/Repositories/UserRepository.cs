@@ -5,7 +5,7 @@ using DeskReservationApp.Domain.Entities;
 namespace DeskReservationApp.Infrastructure.Persistance.Repositories
 {
     /// <summary>
-    /// User repository implementation for Identity user operations
+    /// User repository implementation for Windows Authentication users
     /// </summary>
     public class UserRepository : IUserRepository
     {
@@ -18,41 +18,45 @@ namespace DeskReservationApp.Infrastructure.Persistance.Repositories
 
         public async Task<List<User>> GetAllAsync()
         {
-            var users = await _dbContext.Users
-                .Select(u => new User
-                {
-                    Id = u.Id,
-                    UserName = u.UserName ?? string.Empty,
-                    Email = u.Email ?? string.Empty,
-                    Roles = (from ur in _dbContext.UserRoles
-                             join r in _dbContext.Roles on ur.RoleId equals r.Id
-                             where ur.UserId == u.Id
-                             select r.Name)
-                            .ToList()
-                })
+            return await _dbContext.Users
+                .Include(u => u.Roles)
+                .ThenInclude(ur => ur.Role)
                 .ToListAsync();
-
-            return users;
         }
 
         public async Task<User?> GetByIdAsync(string id)
         {
-            var user = await _dbContext.Users
-                .Where(u => u.Id == id)
-                .Select(u => new User
-                {
-                    Id = u.Id,
-                    UserName = u.UserName ?? string.Empty,
-                    Email = u.Email ?? string.Empty,
-                    Roles = (from ur in _dbContext.UserRoles
-                             join r in _dbContext.Roles on ur.RoleId equals r.Id
-                             where ur.UserId == u.Id
-                             select r.Name)
-                            .ToList()
-                })
-                .FirstOrDefaultAsync();
+            return await _dbContext.Users
+                .Include(u => u.Roles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == id);
+        }
 
-            return user;
+        public async Task<User?> GetByUsernameAsync(string username)
+        {
+            return await _dbContext.Users
+                .Include(u => u.Roles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.UserName == username);
+        }
+
+        public async Task AddAsync(User user)
+        {
+            await _dbContext.Users.AddAsync(user);
+        }
+
+        public async Task UpdateAsync(User user)
+        {
+            _dbContext.Users.Update(user);
+        }
+
+        public async Task DeleteAsync(string id)
+        {
+            var user = await GetByIdAsync(id);
+            if (user != null)
+            {
+                _dbContext.Users.Remove(user);
+            }
         }
     }
 }
