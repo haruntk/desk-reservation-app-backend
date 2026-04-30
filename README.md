@@ -2,7 +2,7 @@
 
 A comprehensive desk reservation system built with **ASP.NET Core 8.0** following **Clean Architecture** principles. This application allows users to reserve desks in office spaces with email notifications and automated status management.
 
-## 🏗️ Architecture
+## Architecture
 
 The project follows **Clean Architecture** patterns with clear separation of concerns:
 
@@ -11,28 +11,28 @@ The project follows **Clean Architecture** patterns with clear separation of con
 - **DeskReservationApp.Infrastructure** - Data access, external services, and implementations
 - **DeskReservationApp.API** - Web API controllers and presentation layer
 
-## 🚀 Features
+## Features
 
 ### Core Functionality
-- ✅ **User Management** - Registration, authentication with JWT tokens
-- ✅ **Role-Based Access Control** - Admin, TeamLead, and User roles
-- ✅ **Floor Management** - Create and manage office floors
-- ✅ **Desk Management** - Add, update, and track desk availability
-- ✅ **Reservation System** - Book desks with time slot validation
-- ✅ **Email Notifications** - Automatic confirmation emails for reservations
-- ✅ **Background Services** - Automated reservation status updates
+- **User Management** - Registration, authentication with JWT tokens
+- **Role-Based Access Control** - Admin, TeamLead, and User roles
+- **Floor Management** - Create and manage office floors
+- **Desk Management** - Add, update, and track desk availability
+- **Reservation System** - Book desks with time slot validation
+- **Email Notifications** - Automatic confirmation emails for reservations
+- **Background Services** - Automated reservation status updates
 
 ### Technical Features
-- 🔐 **JWT Authentication** - Secure token-based authentication
-- 📧 **Email Service** - SMTP integration with development mode fallback
-- ⚡ **Exception Handling** - Global exception middleware
-- 🗄️ **Dual Database Design** - Separate auth and business databases
-- 📊 **Entity Framework Core** - Code-first approach with migrations
-- 🔄 **AutoMapper** - Object-to-object mapping
-- 📝 **Swagger/OpenAPI** - Interactive API documentation
-- ⏰ **Background Tasks** - Automated reservation lifecycle management
+- **JWT Authentication** - Secure token-based authentication
+- **Email Service** - SMTP integration with development mode fallback
+- **Exception Handling** - Global exception middleware
+- **Dual Database Design** - Separate auth and business databases
+- **Entity Framework Core** - Code-first approach with migrations
+- **AutoMapper** - Object-to-object mapping
+- **Swagger/OpenAPI** - Interactive API documentation
+- **Background Tasks** - Automated reservation lifecycle management
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 - **Framework**: ASP.NET Core 8.0
 - **Database**: SQL Server with Entity Framework Core
@@ -42,13 +42,13 @@ The project follows **Clean Architecture** patterns with clear separation of con
 - **Mapping**: AutoMapper
 - **Architecture**: Clean Architecture + Repository Pattern + Unit of Work
 
-## 📋 Prerequisites
+## Prerequisites
 
 - [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - [SQL Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) (LocalDB or full instance)
 - [Visual Studio 2022](https://visualstudio.microsoft.com/) or [VS Code](https://code.visualstudio.com/)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone the Repository
 ```bash
@@ -171,7 +171,7 @@ Key configuration sections in `appsettings.json`:
 }
 ```
 
-## 🔄 Background Services
+## Background Services
 
 The application includes automated background services:
 
@@ -209,7 +209,7 @@ The email service supports both development and production modes:
 5. **Make Reservation**: Book a desk
 6. **Check Email**: Verify email notification in console
 
-## 🚀 Deployment
+## Deployment
 
 ### Environment Variables
 For production deployment, configure these environment variables:
@@ -230,7 +230,7 @@ dotnet ef database update --project DeskReservationApp.Infrastructure --startup-
 dotnet ef database update --project DeskReservationApp.Infrastructure --startup-project DeskReservationApp.API --context DeskReservationDbContext
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 desk-reservation-app-backend/
@@ -253,7 +253,7 @@ desk-reservation-app-backend/
     └── Services/                     # External service implementations
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -261,7 +261,7 @@ desk-reservation-app-backend/
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -303,7 +303,7 @@ To enable detailed logging, set the logging level in `appsettings.Development.js
 }
 ```
 
-## 📞 Support
+## Support
 
 For support and questions:
 - Create an issue in the repository
@@ -311,5 +311,3 @@ For support and questions:
 - Review the API documentation via Swagger
 
 ---
-
-**Built with ❤️ using Clean Architecture principles**
